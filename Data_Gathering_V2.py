@@ -23,7 +23,6 @@ import requests
 import winsound
 #==================================================Parameters and initilization=========================================
 MaxProcessDuration=0
-FirstTimeRun = True
 daysbeforenow = 1;PastRecordsFrom = int(time.time())-86340*daysbeforenow #It calculate the exact starting time for data gathering
 exchanges = ['bybit','binance']
 markets = ['ADAUSDT','ETHUSDT','BTCUSDT','BNBUSDT']
@@ -114,40 +113,30 @@ def checking_deleting_missing_data(dataframe):  #input is a data frame and if so
     #print("Process duration: ", stoptime-starttime) #Test point
     return dataframe
 
-
 def job():
-    global FirstTimeRun
     global MaxProcessDuration
+    starttime = time.time()
 
-    if FirstTimeRun == False:       #getting cyclic row
-        starttime = time.time()
-        for exc in exchanges:
-            for pair in markets:
-                if not check_connection(exchange=exc): break  # checking API connection and if not it will break the sequence
-                for tf in timeframes:  # [5, 30, 60]
-                    date = datetime.strptime(str(datetime.now()), "%Y-%m-%d  %H:%M:%S.%f")
-                    if ((date.minute % tf) == 0) and (tf <= 60) or ((tf > 60) and (date.minute == 0) and ((date.hour % (tf/60)) == 0)):
-                        print(datetime.now())
-                        print(exc, " ", pair, " ", tf)
-                        df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=int(time.time()) - ((tf*60)+55))
-                        print(df)
-                        print("===============================")
+    for exc in exchanges:
+        for pair in markets:
+            if not check_connection(exchange=exc): break  # checking API connection and if not it will break the sequence
+            for tf in timeframes:  # [5, 30, 60]
+                date = datetime.strptime(str(datetime.now()), "%Y-%m-%d  %H:%M:%S.%f")
+                if ((date.minute % tf) == 0) and (tf <= 60) or ((tf > 60) and (date.minute == 0) and ((date.hour % (tf/60)) == 0)):
+                    table_name = exc.upper() + '_' + pair + '_' + str(tf) + 'm'
+                    print(table_name)
 
-
-        stoptime = time.time()
-        if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation each cycle process time
-        if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
-        print("Maximum process duration: ", MaxProcessDuration) #Test point
-
-    elif FirstTimeRun == True:      #getting passed missed rows
-        for exc in exchanges:
-            for pair in markets:
-                for tf in timeframes:
+                    print(datetime.now())
                     print(exc, " ", pair, " ", tf)
-                    df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=PastRecordsFrom)
+                    df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=int(time.time()) - ((tf*60)+55))
                     print(df)
                     print("===============================")
-        FirstTimeRun = False
+
+
+    stoptime = time.time()
+    if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation maximum process time
+    if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
+    print("Maximum process duration: ", MaxProcessDuration) #Test point
 
 
 def live_price():
