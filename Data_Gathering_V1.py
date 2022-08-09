@@ -1,9 +1,12 @@
-"""Here we are gathering desire candle stick markets and calculate their Indicators and Oscilators and store them in a Sqlite DB
-this version working very well """
-# https://bybit-exchange.github.io/docs/linear/#t-querykline    Documentation
-# https://binance-docs.github.io/apidocs/futures/en/#general-info
-# https://github.com/bukosabino/ta or https://github.com/mrjbq7/ta-lib or https://github.com/twopirllc/pandas-ta or https://github.com/peerchemist/finta  Documentation
+"""Here we are gathering desire candle stick markets from different site API and store them in a Sqlite DB for other procedure use
+this version is under test
 
+***Two APIs has been added (Binance and Bybit)
+
+you can find relevant documentes from following links:
+https://bybit-exchange.github.io/docs/linear/#t-querykline
+https://binance-docs.github.io/apidocs/futures/en/#general-info
+"""
 from pybit import HTTP
 from pybit import usdt_perpetual
 import time
@@ -19,14 +22,18 @@ import subprocess
 import requests
 import winsound
 #==================================================Parameters and initilization=========================================
+MaxProcessDuration=0
 FirstTimeRun = True
-daysbeforenow = 10;PastRecordsFrom = int(time.time())-86340*daysbeforenow #It calclate the exact starting time for data gathering
-exchanges = ['Bybit','Binance']
+daysbeforenow = 1;PastRecordsFrom = int(time.time())-86340*daysbeforenow #It calculate the exact starting time for data gathering
+exchanges = ['bybit','binance']
 markets = ['ADAUSDT','ETHUSDT','BTCUSDT','BNBUSDT']
-timeframes = [5, 30, 60]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
+timeframes = [1, 5, 15, 30]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
 
 #=======================================================Functions=======================================================
-def check_connection(url):
+def check_connection(exchange):
+    if exchange=='bybit': url='https://api.bybit.com'
+    elif exchange=='binance': url='https://api.binance.com'
+
     try:
         requests.get(url, timeout=5)
         Connection = True
@@ -35,7 +42,7 @@ def check_connection(url):
         print(datetime.now(), " No internet connection to ", url)
         Connection = False
     return Connection
-def get_past_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720 ## e.g=> get_past_data(exchange="bybit", timeframe="15", symbol="ETHUSDT", StartTimeSecs=1659369391)
+def get_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720 ## e.g=> get_past_data(exchange="bybit", timeframe="15", symbol="ETHUSDT", StartTimeSecs=1659369391)
     ProcessStartTime = time.time()
     DataFrame = pd.DataFrame()
 #====================================================bybit==============================================================
@@ -90,7 +97,7 @@ def get_past_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time 
     ProcessStopTime = time.time()
     ProcessTime = ProcessStopTime-ProcessStartTime
     #print("Process time duration", ProcessTime)     #Test point
-    table_name = exchange.upper() + '_' + symbol + '_' + timeframe+'m'
+    table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
     return DataFrame[['open_time','open','high','low','close','volume']], table_name
 def checking_deleting_missing_data(dataframe):  #input is a data frame and if some row is missed it will drop the rest of data frame
     starttime = time.time()
@@ -99,7 +106,7 @@ def checking_deleting_missing_data(dataframe):  #input is a data frame and if so
     dataframe['error'] = ((dataframe['open_time'].shift(-1) - dataframe['open_time']).dropna() != MostCommonValue)  #find out is there any missed row
     error_row = (dataframe['open_time'].where(dataframe['error'] == True)).dropna()
     del dataframe['error']
-    if len(error_row) > 0:
+    if len(error_row) > 0:          #if there is any missed rows it will remove the data from that row
         error_row = int(error_row.min())
         dataframe = dataframe[(dataframe['open_time'] <= error_row)]
 
@@ -109,13 +116,39 @@ def checking_deleting_missing_data(dataframe):  #input is a data frame and if so
 
 
 def job():
-    print(datetime.now(), "  ", int(time.time()))
-def get_cycle_data(exchanges, symbol):
-    pass
-def checking_fixing_missing_data(dataframe):
-    pass
-def first_initilization():
-    pass
+    global FirstTimeRun
+    global MaxProcessDuration
+
+    if FirstTimeRun == False:       #getting cyclic row
+        starttime = time.time()
+        for exc in exchanges:
+            for pair in markets:
+                for tf in timeframes:  # [5, 30, 60]
+                    date = datetime.strptime(str(datetime.now()), "%Y-%m-%d  %H:%M:%S.%f")
+                    if ((date.minute % tf) == 0) and (tf <= 60) or ((tf > 60) and (date.minute == 0) and ((date.hour % (tf/60)) == 0)):
+                        print(datetime.now())
+                        print(exc, " ", pair, " ", tf)
+                        df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=int(time.time()) - ((tf*60)+55))
+                        print(df)
+                        print("===============================")
+
+
+        stoptime = time.time()
+        if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation each cycle process time
+        if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
+        print("Maximum process duration: ", MaxProcessDuration) #Test point
+
+    elif FirstTimeRun == True:      #getting passed missed rows
+        for exc in exchanges:
+            for pair in markets:
+                for tf in timeframes:
+                    print(exc, " ", pair, " ", tf)
+                    df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=PastRecordsFrom)
+                    print(df)
+                    print("===============================")
+        FirstTimeRun = False
+
+
 def live_price():
     pass
 #====================================================Main Progress======================================================
