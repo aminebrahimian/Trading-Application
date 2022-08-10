@@ -21,12 +21,14 @@ import sys
 import subprocess
 import requests
 import winsound
+import itertools
 #==================================================Parameters and initilization=========================================
 MaxProcessDuration=0
-daysbeforenow = 1;PastRecordsFrom = int(time.time())-86340*daysbeforenow #It calculate the exact starting time for data gathering
-exchanges = ['bybit','binance']
-markets = ['ADAUSDT','ETHUSDT','BTCUSDT','BNBUSDT']
+daysbeforenow = 1;PastRecordsFrom = int(time.time())-(86340*daysbeforenow) #It calculate the exact starting time for data gathering
+exchanges = ['binance', 'bybit']
+markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
 timeframes = [1, 3, 5, 15, 30, 60, 120, 240, 360, 720]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
+DB_Name = "Data_Gathering_DB.db"
 
 #=======================================================Functions=======================================================
 def check_connection(exchange):
@@ -115,20 +117,35 @@ def checking_deleting_missing_data(dataframe):  #input is a data frame and if so
 
 def job():
     global MaxProcessDuration
+    global PastRecordsFrom
     starttime = time.time()
 
     for exc in exchanges:
         for pair in markets:
             if not check_connection(exchange=exc): break  # checking API connection and if not it will break the sequence
+            date = datetime.strptime(str(datetime.now()), "%Y-%m-%d  %H:%M:%S.%f")
             for tf in timeframes:  # [5, 30, 60]
-                date = datetime.strptime(str(datetime.now()), "%Y-%m-%d  %H:%M:%S.%f")
                 if ((date.minute % tf) == 0) and (tf <= 60) or ((tf > 60) and (date.minute == 0) and ((date.hour % (tf/60)) == 0)):
+                    #=========DB manipulation==========
                     table_name = exc.upper() + '_' + pair + '_' + str(tf) + 'm'
-                    print(table_name)
+                    con = sqlite3.connect(DB_Name)
+                    Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
+                    if table_name in Existing_Tables_List['name'].values.tolist():  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
+                        Last_Record = int(pd.read_sql('select open_time from ' + table_name + ' ORDER BY open_time DESC LIMIT 1', con).values[0][0])
+                        df, TableName1 = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
+                        df.drop(df.head(1).index, inplace=True)  # drop first row
+                    else:                               #getting past records
+                        Last_Record = PastRecordsFrom
+                        df, TableName1 = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
+                        df.drop(df.tail(1).index, inplace=True)  # drop last row
 
-                    print(datetime.now())
+                    df.to_sql(table_name, con, if_exists='append', index=False)
+
+                    con.close()
+                    #==================================
+                    print(datetime.now(), "  /  ", time.time(), "  /  ", time.time()-Last_Record)
+                    print("Last record", Last_Record)
                     print(exc, " ", pair, " ", tf)
-                    df, TableName = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=int(time.time()) - ((tf*60)+55))
                     print(df)
                     print("===============================")
 
