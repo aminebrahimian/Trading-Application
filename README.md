@@ -1,4 +1,4 @@
-# Trading-Application
+## Trading-Application
 
 # a brief description about this project till provide final documentation
 
