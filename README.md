@@ -1,6 +1,6 @@
-## Trading-Application
+# Trading-Application
 
-# a brief description about this project till provide final documentation
+## a brief description about this project till provide final documentation
 
 Here we are gonna run different cryptocurrency ecxhanges APIs and store all of candles' record in a sqlite3 database for the next module that is called data prepartion. Data prepration will feed the strategy section and after this phase order will be placed by another API.
 Data visulazation is best part to evaluating the entire procedure accordingly, that dash has been consider for.
