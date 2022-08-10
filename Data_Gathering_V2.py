@@ -25,6 +25,9 @@ import itertools
 #==================================================Parameters and initilization=========================================
 MaxProcessDuration=0
 daysbeforenow = 1;PastRecordsFrom = int(time.time())-(86340*daysbeforenow) #It calculate the exact starting time for data gathering
+
+#=============Initializing parameters=================
+#***Note: Each cycle processing duration could not exceed from the minimum timeframe
 exchanges = ['binance', 'bybit']
 markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
 timeframes = [1, 3, 5, 15, 30, 60, 120, 240, 360, 720]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
@@ -98,8 +101,8 @@ def get_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frame
     ProcessStopTime = time.time()
     ProcessTime = ProcessStopTime-ProcessStartTime
     #print("Process time duration", ProcessTime)     #Test point
-    table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
-    return DataFrame[['open_time','open','high','low','close','volume']], table_name
+    #table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
+    return DataFrame[['open_time','open','high','low','close','volume']]
 def checking_deleting_missing_data(dataframe):  #input is a data frame and if some row is missed it will drop the rest of data frame
     starttime = time.time()
 
@@ -114,7 +117,6 @@ def checking_deleting_missing_data(dataframe):  #input is a data frame and if so
     stoptime = time.time()
     #print("Process duration: ", stoptime-starttime) #Test point
     return dataframe
-
 def job():
     global MaxProcessDuration
     global PastRecordsFrom
@@ -132,15 +134,14 @@ def job():
                     Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
                     if table_name in Existing_Tables_List['name'].values.tolist():  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
                         Last_Record = int(pd.read_sql('select open_time from ' + table_name + ' ORDER BY open_time DESC LIMIT 1', con).values[0][0])
-                        df, TableName1 = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
+                        df = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
                         df.drop(df.head(1).index, inplace=True)  # drop first row
                     else:                               #getting past records
                         Last_Record = PastRecordsFrom
-                        df, TableName1 = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
+                        df = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
                         df.drop(df.tail(1).index, inplace=True)  # drop last row
 
                     df.to_sql(table_name, con, if_exists='append', index=False)
-
                     con.close()
                     #==================================
                     print(datetime.now(), "  /  ", time.time(), "  /  ", time.time()-Last_Record)
@@ -149,19 +150,17 @@ def job():
                     print(df)
                     print("===============================")
 
-
     stoptime = time.time()
     if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation maximum process time
     if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
     print("Maximum process duration: ", MaxProcessDuration) #Test point
 
-
-def live_price():
+def live_price(exchange, symbol):
     pass
 #====================================================Main Progress======================================================
 
 job()
-schedule.every(1).minute.at(":00").do(job)  # Task Scheduler
+schedule.every(1).minute.at(":00").do(job)  # Task Scheduler (you can change this according to your minimum timeframe)
 while True:
     schedule.run_pending()
     time.sleep(1)

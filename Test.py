@@ -7,9 +7,18 @@ con = sqlite3.connect(DB_Name)
 Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
 
 for i in Existing_Tables_List['name'].values.tolist():
-    df = pd.read_sql('SELECT open_time from ' + i, con)
-    print(df)
-    print(df.shift(-1))
+    print(i)
+    df1 = pd.read_sql('SELECT open_time from ' + i, con)
+    df2 = df1.shift(-1)
+    df1.drop(df1.tail(1).index, inplace=True)  # drop last n rows
+    df2.drop(df2.tail(1).index, inplace=True)  # drop last n rows
+    for j in range (0, len(df1)):
+        if df2['open_time'].iloc[j] != df1['open_time'].iloc[j]:
+            print("Error in row: ", j)
 
+
+
+
+    print("=============================================")
 
 con.close()
