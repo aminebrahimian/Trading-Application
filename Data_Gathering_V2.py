@@ -29,8 +29,8 @@ daysbeforenow = 1;PastRecordsFrom = int(time.time())-(86340*daysbeforenow) #It c
 #=============Initializing parameters=================
 #***Note: Each cycle processing duration could not exceed from the minimum timeframe
 exchanges = ['binance', 'bybit']
-markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
-timeframes = [1, 3, 5, 15, 30, 60, 120, 240, 360, 720]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
+markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
+timeframes = [5, 15, 30, 60]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
 DB_Name = "Data_Gathering_DB.db"
 
 #=======================================================Functions=======================================================
@@ -47,61 +47,64 @@ def check_connection(exchange):
         Connection = False
     return Connection
 def get_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720 ## e.g=> get_past_data(exchange="bybit", timeframe="15", symbol="ETHUSDT", StartTimeSecs=1659369391)
-    ProcessStartTime = time.time()
-    DataFrame = pd.DataFrame()
-#====================================================bybit==============================================================
-    if exchange == 'bybit':
-        session = usdt_perpetual.HTTP("https://api.bybit.com")
-        TimeDiff = ProcessStartTime - StartTimeSecs         #Calculate number of needed Candles and start Time
-        NoOfMissedCandles = int(TimeDiff / (int(timeframe)*60))
-        MissedBunchOfCandles = int(NoOfMissedCandles / 200)
+    try:
+        ProcessStartTime = time.time()
+        DataFrame = pd.DataFrame()
+    #====================================================bybit==============================================================
+        if exchange == 'bybit':
+            session = usdt_perpetual.HTTP("https://api.bybit.com")
+            TimeDiff = ProcessStartTime - StartTimeSecs         #Calculate number of needed Candles and start Time
+            NoOfMissedCandles = int(TimeDiff / (int(timeframe)*60))
+            MissedBunchOfCandles = int(NoOfMissedCandles / 200)
 
-        if MissedBunchOfCandles > 0:
-            for i in range(MissedBunchOfCandles, 0, -1):
-                result = session.query_kline(symbol=symbol, interval=timeframe, limit=200, from_time=StartTimeSecs)['result']
-                result = pd.DataFrame.from_dict(result)
-                DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
-                StartTimeSecs = StartTimeSecs + (int(timeframe)*60*200)
-                NoOfMissedCandles = NoOfMissedCandles - 200
-        result = session.query_kline(symbol=symbol, interval=timeframe, limit=NoOfMissedCandles, from_time=StartTimeSecs)['result']
-        result = pd.DataFrame.from_dict(result)
-        DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
+            if MissedBunchOfCandles > 0:
+                for i in range(MissedBunchOfCandles, 0, -1):
+                    result = session.query_kline(symbol=symbol, interval=timeframe, limit=200, from_time=StartTimeSecs)['result']
+                    result = pd.DataFrame.from_dict(result)
+                    DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
+                    StartTimeSecs = StartTimeSecs + (int(timeframe)*60*200)
+                    NoOfMissedCandles = NoOfMissedCandles - 200
+            result = session.query_kline(symbol=symbol, interval=timeframe, limit=NoOfMissedCandles, from_time=StartTimeSecs)['result']
+            result = pd.DataFrame.from_dict(result)
+            DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
 
-#===================================================binance=============================================================
-    elif exchange == 'binance':
-        if int(int(timeframe) / 60) == 0:timeframestr = str(timeframe) + "m"    # translate timeframe formate for binance
-        elif int(int(timeframe) / 60) > 0:timeframestr = str(int(int(timeframe) / 60)) + "h"
-        ###
-        URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&startTime=" + str(StartTimeSecs) + "000&interval=" + timeframestr + "&limit=1"
-        result = requests.get(url=URL).json()
-        StartTimeSecs = int(result[0][0]/1000)      #Calculate
-        ###
-        TimeDiff = ProcessStartTime - StartTimeSecs  # Calculate number of needed Candles and start Time
-        NoOfMissedCandles = int(TimeDiff / (int(timeframe) * 60))
-        MissedBunchOfCandles = int(NoOfMissedCandles / 1000)
+    #===================================================binance=============================================================
+        elif exchange == 'binance':
+            if int(int(timeframe) / 60) == 0:timeframestr = str(timeframe) + "m"    # translate timeframe formate for binance
+            elif int(int(timeframe) / 60) > 0:timeframestr = str(int(int(timeframe) / 60)) + "h"
+            ###
+            URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&startTime=" + str(StartTimeSecs) + "000&interval=" + timeframestr + "&limit=1"
+            result = requests.get(url=URL).json()
+            StartTimeSecs = int(result[0][0]/1000)      #Calculate
+            ###
+            TimeDiff = ProcessStartTime - StartTimeSecs  # Calculate number of needed Candles and start Time
+            NoOfMissedCandles = int(TimeDiff / (int(timeframe) * 60))
+            MissedBunchOfCandles = int(NoOfMissedCandles / 1000)
 
-        if MissedBunchOfCandles > 0:
-            for i in range(MissedBunchOfCandles, 0, -1):
-                URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol +"&startTime="+str(StartTimeSecs)+"000&interval=" + timeframestr + "&limit=1000"
-                result = requests.get(url=URL).json()
-                result = pd.DataFrame(result, columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_volume', 'taker_buy_quote_asset_volume', 'ignore'])
-                DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
-                StartTimeSecs = StartTimeSecs + (int(timeframe)*60*1000)
-                NoOfMissedCandles = NoOfMissedCandles - 1000
-        URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol +"&startTime="+str(StartTimeSecs)+"000&interval=" + timeframestr + "&limit="+str(NoOfMissedCandles)
-        result = requests.get(url=URL).json()
-        result = pd.DataFrame (result, columns = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_volume', 'taker_buy_quote_asset_volume', 'ignore'])
-        DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
-        DataFrame['open_time'] = (DataFrame['open_time'] / 1000).astype(int)
+            if MissedBunchOfCandles > 0:
+                for i in range(MissedBunchOfCandles, 0, -1):
+                    URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol +"&startTime="+str(StartTimeSecs)+"000&interval=" + timeframestr + "&limit=1000"
+                    result = requests.get(url=URL).json()
+                    result = pd.DataFrame(result, columns=['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+                    DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
+                    StartTimeSecs = StartTimeSecs + (int(timeframe)*60*1000)
+                    NoOfMissedCandles = NoOfMissedCandles - 1000
+            URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol +"&startTime="+str(StartTimeSecs)+"000&interval=" + timeframestr + "&limit="+str(NoOfMissedCandles)
+            result = requests.get(url=URL).json()
+            result = pd.DataFrame (result, columns = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+            DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
+            DataFrame['open_time'] = (DataFrame['open_time'] / 1000).astype(int)
 
-#===============================================Other exchange==========================================================
-    elif exchange == 'kucoin':
-        print("Kucoin is not implemented yet")
+    #===============================================Other exchange==========================================================
+        elif exchange == 'kucoin':
+            print("Kucoin is not implemented yet")
 
-    ProcessStopTime = time.time()
-    ProcessTime = ProcessStopTime-ProcessStartTime
-    #print("Process time duration", ProcessTime)     #Test point
-    #table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
+        ProcessStopTime = time.time()
+        ProcessTime = ProcessStopTime-ProcessStartTime
+        #print("Process time duration", ProcessTime)     #Test point
+        #table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
+    except:
+        print("Error, Get data exception appear")
     return DataFrame[['open_time','open','high','low','close','volume']]
 def checking_deleting_missing_data(dataframe):  #input is a data frame and if some row is missed it will drop the rest of data frame
     starttime = time.time()
@@ -151,12 +154,11 @@ def job():
                     print("===============================")
 
     stoptime = time.time()
+    print(datetime.now())
     if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation maximum process time
     if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
     print("Maximum process duration: ", MaxProcessDuration) #Test point
 
-def live_price(exchange, symbol):
-    pass
 #====================================================Main Progress======================================================
 
 job()
