@@ -1,5 +1,6 @@
 """
-Here we are gathering desire data from Data_Gathering_DB.db and prepare it for the next module that is
+Here we are gathering desire data from Data_Gathering_DB.db and do preparation and calculation such as polynomial regression,
+linear regression and etc. the final output is a long or a short signal that will pass to the placing order script
 """
 import pandas as pd
 import sqlite3
