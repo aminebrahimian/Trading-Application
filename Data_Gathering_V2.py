@@ -94,6 +94,7 @@ def get_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frame
             result = pd.DataFrame (result, columns = ['open_time', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_volume', 'taker_buy_quote_asset_volume', 'ignore'])
             DataFrame = pd.concat([DataFrame, result], ignore_index=True, axis=0)
             DataFrame['open_time'] = (DataFrame['open_time'] / 1000).astype(int)
+            DataFrame = DataFrame.astype({"open": float, "high": float, "low": float, "close": float, "volume": float}) #chanching object types to float
 
     #===============================================Other exchange==========================================================
         elif exchange == 'kucoin':
