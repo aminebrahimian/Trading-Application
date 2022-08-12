@@ -29,7 +29,7 @@ SecondShortConditionLatch = [False, False, False]
 SecondLongConditionLatch = [False, False, False]
 
 FirstTimeRun = True
-Job_Delay = 10      #Delay parameter for starting procedure in seconds
+Job_Delay = 20      #Delay parameter for starting procedure in seconds
 Working_Status = "Normal"   #this can be chosen for whole procedure "Backtest" or "Normal"
 #===========Functions handlling section============
 def job():
@@ -42,9 +42,9 @@ def job():
                 Data=swing_detector_prepertion(DataFrame=Data, Order=6)     #Adding swings to the Data farme
                 Data=swing_detector_prepertion_order2(DataFrame=Data, Order=2)
                 Data=linear_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0)     #Adding Linear regression support and resistance to the Data farme
-                #Data=sub_linear_regression_support_Resistance(DataFrame=Data, SwingCount=3, SwingThreshold=0)
-                #Data=polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
-                #Data=sub_polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
+                Data=sub_linear_regression_support_Resistance(DataFrame=Data, SwingCount=3, SwingThreshold=0)
+                Data=polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
+                Data=sub_polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
                 #Data=trend_power_calculation(DataFrame=Data)
 
                 #======DB Manipulation==============
@@ -111,7 +111,6 @@ def swing_detector_prepertion_order2(DataFrame, Order):         #this function g
             for j in (DataFrame.loc[(DataFrame.index >= swinglowtimframe[i - 1]) & (DataFrame.index <= swinglowtimframe[i])])['swing_high_order2'].dropna().sort_values(ascending=False)[1:].index:
                 DataFrame.loc[(DataFrame.index == j),['swing_high_order2']] = np.nan
     return DataFrame
-
 def linear_regression_support_Resistance(DataFrame, SwingCount, SwingThreshold):
     df1 = DataFrame[['open_time','swing_high']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
     df2 = DataFrame[['open_time', 'swing_low']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
@@ -131,64 +130,62 @@ def linear_regression_support_Resistance(DataFrame, SwingCount, SwingThreshold):
     DataFrame['LinRegSup_Residual_Error'] = (DataFrame['swing_low'] - DataFrame['LinReg_Support']).fillna(0).replace(0, np.nan)
 
     DataFrame = DataFrame[(DataFrame['open_time'] >= min([df1[['open_time']].iloc[0, 0], df2[['open_time']].iloc[0, 0]]))]  #Just keep the desired swings data and drop the rest
-
     return DataFrame
-
 def sub_linear_regression_support_Resistance(DataFrame, SwingCount, SwingThreshold):
-    df1 = DataFrame[['Open_Time_Sec', 'Swing_High_Order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    df2 = DataFrame[['Open_Time_Sec', 'Swing_Low_Order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    X1 = df1[['Open_Time_Sec']];Y1 = df1[['Swing_High_Order2']]
-    X2 = df2[['Open_Time_Sec']];Y2 = df2[['Swing_Low_Order2']]
+    df1 = DataFrame[['open_time', 'swing_high_order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    df2 = DataFrame[['open_time', 'swing_low_order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    X1 = df1[['open_time']];Y1 = df1[['swing_high_order2']]
+    X2 = df2[['open_time']];Y2 = df2[['swing_low_order2']]
     lm1 = LinearRegression();lm2 = LinearRegression()
     Res = lm1.fit(X1, Y1);Sup = lm2.fit(X2, Y2)
 
-    DataFrame.loc[DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]), ['Sub_LinReg_Resistance']] = \
-        lm1.predict(((DataFrame[(DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]))])[['Open_Time_Sec']]))
-    DataFrame.loc[DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]), ['Sub_LinReg_Support']] = \
-        lm2.predict(((DataFrame[(DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]))])[['Open_Time_Sec']]))
-
+    DataFrame.loc[DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]), ['Sub_LinReg_Resistance']] = \
+        lm1.predict(((DataFrame[(DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]))])[['open_time']]))
+    DataFrame.loc[DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]), ['Sub_LinReg_Support']] = \
+        lm2.predict(((DataFrame[(DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]))])[['open_time']]))
     return DataFrame
 def polynomial_regression_support_Resistance(DataFrame, SwingCount, SwingThreshold, degree):
-    df1 = DataFrame[['Open_Time_Sec', 'Swing_High']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    df2 = DataFrame[['Open_Time_Sec', 'Swing_Low']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    X1=df1["Open_Time_Sec"];Y1=df1["Swing_High"]
-    X2=df2["Open_Time_Sec"];Y2=df2["Swing_Low"]
+    df1 = DataFrame[['open_time', 'swing_high']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    df2 = DataFrame[['open_time', 'swing_low']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    X1=df1["open_time"];Y1=df1["swing_high"]
+    X2=df2["open_time"];Y2=df2["swing_low"]
     mymodel1 = np.poly1d(np.polyfit(X1, Y1, degree))
     mymodel2 = np.poly1d(np.polyfit(X2, Y2, degree))
-    DataFrame['PolyReg_Resistance'] = mymodel1(DataFrame['Open_Time_Sec'])
-    DataFrame['PolyReg_Support'] = mymodel2(DataFrame['Open_Time_Sec'])
+    DataFrame['PolyReg_Resistance'] = mymodel1(DataFrame['open_time'])
+    DataFrame['PolyReg_Support'] = mymodel2(DataFrame['open_time'])
     return DataFrame
 def sub_polynomial_regression_support_Resistance(DataFrame, SwingCount, SwingThreshold, degree):
-    df1 = DataFrame[['Open_Time_Sec', 'Swing_High_Order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    df2 = DataFrame[['Open_Time_Sec', 'Swing_Low_Order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
-    X1=df1["Open_Time_Sec"];Y1=df1["Swing_High_Order2"]
-    X2=df2["Open_Time_Sec"];Y2=df2["Swing_Low_Order2"]
+    df1 = DataFrame[['open_time', 'swing_high_order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    df2 = DataFrame[['open_time', 'swing_low_order2']].dropna().tail(SwingCount).head(SwingCount-SwingThreshold)
+    X1=df1["open_time"];Y1=df1["swing_high_order2"]
+    X2=df2["open_time"];Y2=df2["swing_low_order2"]
     mymodel1 = np.poly1d(np.polyfit(X1, Y1, degree))
     mymodel2 = np.poly1d(np.polyfit(X2, Y2, degree))
     #DataFrame['Sub_PolyReg_Resistance'] = mymodel1(DataFrame['Open_Time_Sec'])
     #DataFrame['Sub_PolyReg_Support'] = mymodel2(DataFrame['Open_Time_Sec'])
-    DataFrame.loc[DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]), ['Sub_PolyReg_Resistance']] = \
-        mymodel1((DataFrame[(DataFrame['Open_Time_Sec']>=(df1['Open_Time_Sec'].head(1).values[0]))])[['Open_Time_Sec']])
-    DataFrame.loc[DataFrame['Open_Time_Sec'] >= (df1['Open_Time_Sec'].head(1).values[0]), ['Sub_PolyReg_Support']] = \
-        mymodel2((DataFrame[(DataFrame['Open_Time_Sec']>=(df1['Open_Time_Sec'].head(1).values[0]))])[['Open_Time_Sec']])
+    DataFrame.loc[DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]), ['Sub_PolyReg_Resistance']] = \
+        mymodel1((DataFrame[(DataFrame['open_time']>=(df1['open_time'].head(1).values[0]))])[['open_time']])
+    DataFrame.loc[DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]), ['Sub_PolyReg_Support']] = \
+        mymodel2((DataFrame[(DataFrame['open_time']>=(df1['open_time'].head(1).values[0]))])[['open_time']])
     return DataFrame
+
 def trend_power_calculation(DataFrame):
     #Close position calculate 3-states of High Close, Mid Close and Low Close and return a number between -1 to +1 (Data Normalization/-1~-0.34 low close/-0.34~+0.34 mid close/+0.34~1 high close)
-    DataFrame['Close_Position_Power'] = ((DataFrame['Close'] - (((DataFrame['High']-DataFrame['Low'])/2)+DataFrame['Low'])) * 2)  / (DataFrame['High']-DataFrame['Low'])  # Formula ((C-M)*2)/(H-L) = -1 to +1
+    DataFrame['close_position_power'] = ((DataFrame['close'] - (((DataFrame['high']-DataFrame['low'])/2)+DataFrame['low'])) * 2)  / (DataFrame['high']-DataFrame['low'])  # Formula ((C-M)*2)/(H-L) = -1 to +1
 
     #Close comparison power (if the close is higher than range of previouse candle return 1 if it inside the range retuen 0 and if lower return -1 )
-    DataFrame.loc[(DataFrame['Close'] > DataFrame['High'].shift(1)), ['Close_Comparison_Power']] = 1
-    DataFrame.loc[(DataFrame['Close'] < DataFrame['Low'].shift(1)), ['Close_Comparison_Power']] = -1
-    DataFrame.loc[(DataFrame['Close'] > DataFrame['Low'].shift(1)) & (DataFrame['Close'] < DataFrame['High'].shift(1)), ['Close_Comparison_Power']] = 0
+    DataFrame.loc[(DataFrame['close'] > DataFrame['high'].shift(1)), ['close_comparison_power']] = 1
+    DataFrame.loc[(DataFrame['close'] < DataFrame['low'].shift(1)), ['close_comparison_power']] = -1
+    DataFrame.loc[(DataFrame['close'] > DataFrame['low'].shift(1)) & (DataFrame['close'] < DataFrame['high'].shift(1)), ['close_comparison_power']] = 0
 
     #Body Power calculation
-    DataFrame.loc[(DataFrame['Close'] > DataFrame['Open']), ['Candle_Body_Power']] = (DataFrame['Close'] - DataFrame['Open']) / (DataFrame['Close'] - DataFrame['Open']).max()
-    DataFrame.loc[(DataFrame['Close'] < DataFrame['Open']), ['Candle_Body_Power']] = ((DataFrame['Open'] - DataFrame['Close']) / (DataFrame['Open'] - DataFrame['Close']).max()) * (-1)
+    DataFrame.loc[(DataFrame['close'] > DataFrame['open']), ['candle_body_power']] = (DataFrame['close'] - DataFrame['open']) / (DataFrame['close'] - DataFrame['open']).max()
+    DataFrame.loc[(DataFrame['close'] < DataFrame['open']), ['candle_body_power']] = ((DataFrame['open'] - DataFrame['close']) / (DataFrame['open'] - DataFrame['close']).max()) * (-1)
 
     #Candles colors
-    DataFrame.loc[(DataFrame['Close'] < DataFrame['Open']), ['Candle_Color']] = "red"
-    DataFrame.loc[(DataFrame['Close'] > DataFrame['Open']), ['Candle_Color']] = "green"
-    DataFrame.loc[(DataFrame['Close'] == DataFrame['Open']), ['Candle_Color']] = "gray"
+    DataFrame.loc[(DataFrame['close'] < DataFrame['open']), ['candle_color']] = "red"
+    DataFrame.loc[(DataFrame['close'] > DataFrame['open']), ['candle_color']] = "green"
+    DataFrame.loc[(DataFrame['close'] == DataFrame['open']), ['candle_color']] = "gray"
 
     return DataFrame
 def alarm_orderplace_function():
@@ -246,10 +243,10 @@ def alarm_orderplace_function():
         #elif
 def swing_detector_prepertion_new(DataFrame, Order):
     # Calculating and preparing Swing dataframe swing
-    max_idx = argrelextrema(DataFrame['High'].values, np.greater_equal, order=Order)[0]
-    min_idx = argrelextrema(DataFrame['Low'].values, np.less_equal, order=Order)[0]
-    DataFrame['Swing_High'] = DataFrame.iloc[max_idx]['High']
-    DataFrame['Swing_Low'] = DataFrame.iloc[min_idx]['Low']
+    max_idx = argrelextrema(DataFrame['high'].values, np.greater_equal, order=Order)[0]
+    min_idx = argrelextrema(DataFrame['low'].values, np.less_equal, order=Order)[0]
+    DataFrame['swing_high'] = DataFrame.iloc[max_idx]['high']
+    DataFrame['swing_low'] = DataFrame.iloc[min_idx]['low']
     return DataFrame
 #==============================================MAIN=====================================================================
 url="https://api.bybit.com"

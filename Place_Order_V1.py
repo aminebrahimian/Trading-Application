@@ -2,9 +2,11 @@ from pybit import usdt_perpetual
 import sqlite3
 import pandas as pd
 
+
+
 def Place_Order(Symbol, Position, Leverage, Price, Quantity_Percentage, TP, SL):             #Exchange likes Bybit, Symbol like BTCUSDT,
 
-    con = sqlite3.connect("Users_Parameters.db")
+    con = sqlite3.connect('C:/Users/Amin Laptop/Documents/GitHub/TradingProgram/Bybit/Users_Parameters.db')
     df = pd.read_sql("SELECT * FROM Exchanges WHERE status == \"enable\"", con) #just get a enable exchanges accounts
     con.close()
 
