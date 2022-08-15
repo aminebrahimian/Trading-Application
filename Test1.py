@@ -1,0 +1,2 @@
+def amin():
+    return "Amin"

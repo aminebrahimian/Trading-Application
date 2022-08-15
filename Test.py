@@ -1,10 +1,11 @@
 import pandas as pd
 import sqlite3
+import Test1
+MaxProcessDuration= 1.534534
+#a = round(1.534534, 2)
 
-con = sqlite3.connect('C:/Users/Amin Laptop/Documents/GitHub/TradingProgram/Bybit/Users_Parameters.db')
-df1 = pd.read_sql('SELECT * FROM Exchanges', con)
 
-print(df1)
-#C:\Users\Amin Laptop\AppData\Local\Programs\Python\Python310\python.exe
-#C:\Users\Amin Laptop\AppData\Local\Microsoft\WindowsApps\python.exe
-#C:\Users\Amin Laptop\Documents\GitHub\Trading-Application
+df_parameters = pd.DataFrame.from_dict({"max_process_duration": [round(MaxProcessDuration, 2)+1], "last_process_duration": [LastProcessDuration]})
+print(df_parameters)
+
+

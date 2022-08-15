@@ -25,7 +25,7 @@ import itertools
 #==================================================Parameters and initilization=========================================
 MaxProcessDuration=0
 daysbeforenow = 7;PastRecordsFrom = int(time.time())-(86340*daysbeforenow) #It calculate the exact starting time for data gathering
-
+MaxProcessDuration = 0
 #=============Initializing parameters=================
 #***Note: Each cycle processing duration could not exceed from the minimum timeframe
 exchanges = ['binance', 'bybit']
@@ -103,7 +103,6 @@ def get_data(exchange, symbol, timeframe, StartTimeSecs):      #valid Time frame
         ProcessStopTime = time.time()
         ProcessTime = ProcessStopTime-ProcessStartTime
         #print("Process time duration", ProcessTime)     #Test point
-        #table_name = exchange.upper() + '_' + symbol + '_' + str(timeframe)+'m'
     except:
         print("Error, Get data exception appear")
     return DataFrame[['open_time','open','high','low','close','volume']]
@@ -156,8 +155,9 @@ def job():
 
     stoptime = time.time()
     print(datetime.now())
-    if MaxProcessDuration < (stoptime-starttime): MaxProcessDuration = stoptime-starttime #calculation maximum process time
+    if MaxProcessDuration < (stoptime-starttime):MaxProcessDuration = stoptime-starttime #calculation maximum process time
     if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
+    if date.hour == 0 and date.minute == 1:MaxProcessDuration = 0
     print("Maximum process duration: ", MaxProcessDuration) #Test point
 
 #====================================================Main Progress======================================================
