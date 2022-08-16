@@ -137,7 +137,7 @@ def job():
                     con = sqlite3.connect(DB_Name)
                     Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
 
-                    tables_list = Existing_Tables_List['name'].values.tolist();tables_list.remove('Parameters')
+                    tables_list = Existing_Tables_List['name'].values.tolist();tables_list.remove('Parameters');tables_list.remove('Live_price')
                     if table_name in tables_list:  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
                         Last_Record = int(pd.read_sql('select open_time from ' + table_name + ' ORDER BY open_time DESC LIMIT 1', con).values[0][0])
                         df = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
@@ -161,8 +161,8 @@ def job():
     print(datetime.now())
     if MaxProcessDuration < LastProcessDuration:MaxProcessDuration = LastProcessDuration #calculation maximum process time
     if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
-    #if date.hour == 0 and date.minute == 1:MaxProcessDuration = 0
     print("Maximum process duration: ", MaxProcessDuration) #Test point
+
     # load some parameters in DB (these parameters will be used by next module,in order to have an efficient processing)
     df_parameters = pd.DataFrame.from_dict({"update_time": [int(time.time())], "max_process_duration": [round(MaxProcessDuration, 2)],
                                             "last_process_duration": [round(LastProcessDuration, 2)]})
@@ -170,17 +170,25 @@ def job():
     df_parameters.to_sql('Parameters', con, if_exists='replace', index=False)
     con.close()
 def live_price():
+    prices = dict()
+    prices['update_time'] = int(time.time())
     for exc in exchanges:
         for symbol in markets:
             try:
                 if exc == 'bybit':
                     session = usdt_perpetual.HTTP("https://api.bybit.com")
-                    result = session.query_kline(symbol=symbol, interval=timeframe, limit=200, from_time=StartTimeSecs)['result']
+                    price = session.query_kline(symbol=symbol, interval=1, limit=1, from_time=int(time.time()-60))['result'][0]['close']
                 elif exc == 'binance':
-                    pass
-                print(exc, " ", symbol, " price: " )
+                    URL = "https://api.binance.com/api/v3/klines?symbol=" + symbol + "&startTime=" + str(int(time.time()) - 60) + "000&interval=1m&limit=1"
+                    price = float(requests.get(url=URL).json()[0][4])
+                prices[exc.upper()+"_"+symbol] = price
             except:
                 pass
+
+    df_prices = pd.DataFrame([prices])
+    con = sqlite3.connect(DB_Name)
+    df_prices.to_sql('Live_price', con, if_exists='replace', index=False)
+    con.close()
 #====================================================Main Progress======================================================
 
 job()

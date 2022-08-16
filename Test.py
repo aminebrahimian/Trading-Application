@@ -1,6 +1,10 @@
 from pybit import usdt_perpetual
 import time
+import requests
 
-session = usdt_perpetual.HTTP("https://api.bybit.com")
-result = session.query_kline(symbol='BTCUSDT', interval=1, limit=1, from_time=int(time.time()-60))['result']
-print(result)
+df_prices = pd.DataFrame.from_dict()
+con = sqlite3.connect(DB_Name)
+df_live_price.to_sql('Live_price', con, if_exists='replace', index=False)
+con.close()
+# print(exc, " ", symbol, " price: ", price)
+print(prices)
