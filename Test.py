@@ -1,11 +1,6 @@
-import pandas as pd
-import sqlite3
-import Test1
-MaxProcessDuration= 1.534534
-#a = round(1.534534, 2)
+from pybit import usdt_perpetual
+import time
 
-
-df_parameters = pd.DataFrame.from_dict({"max_process_duration": [round(MaxProcessDuration, 2)+1], "last_process_duration": [LastProcessDuration]})
-print(df_parameters)
-
-
+session = usdt_perpetual.HTTP("https://api.bybit.com")
+result = session.query_kline(symbol='BTCUSDT', interval=1, limit=1, from_time=int(time.time()-60))['result']
+print(result)

@@ -26,6 +26,7 @@ import itertools
 MaxProcessDuration=0
 daysbeforenow = 7;PastRecordsFrom = int(time.time())-(86340*daysbeforenow) #It calculate the exact starting time for data gathering
 MaxProcessDuration = 0
+live_count = 0
 #=============Initializing parameters=================
 #***Note: Each cycle processing duration could not exceed from the minimum timeframe
 exchanges = ['binance', 'bybit']
@@ -135,7 +136,9 @@ def job():
                     table_name = exc.upper() + '_' + pair + '_' + str(tf) + 'm'
                     con = sqlite3.connect(DB_Name)
                     Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
-                    if table_name in Existing_Tables_List['name'].values.tolist():  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
+
+                    tables_list = Existing_Tables_List['name'].values.tolist();tables_list.remove('Parameters')
+                    if table_name in tables_list:  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
                         Last_Record = int(pd.read_sql('select open_time from ' + table_name + ' ORDER BY open_time DESC LIMIT 1', con).values[0][0])
                         df = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)
                         df.drop(df.head(1).index, inplace=True)  # drop first row
@@ -154,12 +157,30 @@ def job():
                     print("===============================")
 
     stoptime = time.time()
+    LastProcessDuration = stoptime-starttime
     print(datetime.now())
-    if MaxProcessDuration < (stoptime-starttime):MaxProcessDuration = stoptime-starttime #calculation maximum process time
+    if MaxProcessDuration < LastProcessDuration:MaxProcessDuration = LastProcessDuration #calculation maximum process time
     if MaxProcessDuration > 55: print("Error1: each cycle is longer than define and it can cause missing values ")
-    if date.hour == 0 and date.minute == 1:MaxProcessDuration = 0
+    #if date.hour == 0 and date.minute == 1:MaxProcessDuration = 0
     print("Maximum process duration: ", MaxProcessDuration) #Test point
-
+    # load some parameters in DB (these parameters will be used by next module,in order to have an efficient processing)
+    df_parameters = pd.DataFrame.from_dict({"update_time": [int(time.time())], "max_process_duration": [round(MaxProcessDuration, 2)],
+                                            "last_process_duration": [round(LastProcessDuration, 2)]})
+    con = sqlite3.connect(DB_Name)
+    df_parameters.to_sql('Parameters', con, if_exists='replace', index=False)
+    con.close()
+def live_price():
+    for exc in exchanges:
+        for symbol in markets:
+            try:
+                if exc == 'bybit':
+                    session = usdt_perpetual.HTTP("https://api.bybit.com")
+                    result = session.query_kline(symbol=symbol, interval=timeframe, limit=200, from_time=StartTimeSecs)['result']
+                elif exc == 'binance':
+                    pass
+                print(exc, " ", symbol, " price: " )
+            except:
+                pass
 #====================================================Main Progress======================================================
 
 job()
@@ -167,3 +188,8 @@ schedule.every(1).minute.at(":00").do(job)  # Task Scheduler (you can change thi
 while True:
     schedule.run_pending()
     time.sleep(1)
+
+    live_count += 1 #This section will call live price every 5 sec
+    if live_count == 5:
+        live_price()
+        live_count = 0

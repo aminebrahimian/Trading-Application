@@ -31,6 +31,7 @@ SecondLongConditionLatch = [False, False, False]
 FirstTimeRun = True
 Job_Delay = 20      #Delay parameter for starting procedure in seconds
 Working_Status = "Normal"   #this can be chosen for whole procedure "Backtest" or "Normal"
+
 #===========Functions handlling section============
 def job():
     time.sleep(Job_Delay)
@@ -265,5 +266,5 @@ while FirstTimeRun:
 while True:
     #alarm_orderplace_function()
     schedule.run_pending()
-    time.sleep(7)
+    time.sleep(1)
 
