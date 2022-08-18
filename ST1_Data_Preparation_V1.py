@@ -30,7 +30,6 @@ SecondLongConditionLatch = [False, False, False]
 
 FirstTimeRun = True
 Job_Delay = 20      #Delay parameter for starting procedure in seconds
-Working_Status = "Normal"   #this can be chosen for whole procedure "Backtest" or "Normal"
 
 #===========Functions handlling section============
 def job():
@@ -46,25 +45,26 @@ def job():
                 Data=sub_linear_regression_support_Resistance(DataFrame=Data, SwingCount=3, SwingThreshold=0)
                 Data=polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
                 Data=sub_polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
-                #Data=trend_power_calculation(DataFrame=Data)
+                Data=trend_power_calculation(DataFrame=Data)
 
                 #======DB Manipulation==============
                 TableName = exc+'_'+Symbol+'_'+str(tf)
                 con = sqlite3.connect("Strategy1_DB.db")
                 Data.to_sql(name=TableName, con=con, if_exists='replace')
-                #Data_Temp = {'open_time': [Data['open_time'][-1]], 'time_tag': [Data.index[-1]], 'Res_Coefficient': [Data['Res_Coefficient'][-1]], 'Sup_Coefficient': [Data['Sup_Coefficient'][-1]]}  # Create Tables
-                #df_Temp = pd.DataFrame(Data_Temp)
-                #df_Temp.to_sql('Market_Logs_'+Symbol, con, if_exists='append', index=False)
-                #con.close()
-                #print(Data)
+                Data_Temp = {'open_time': [Data['open_time'][-1]], 'time_tag': [Data.index[-1]], 'Res_Coefficient': [Data['Res_Coefficient'][-1]], 'Sup_Coefficient': [Data['Sup_Coefficient'][-1]]}  # Create Tables
+                df_Temp = pd.DataFrame(Data_Temp)
+                df_Temp.to_sql('Market_Logs_'+exc+'_'+Symbol+'_'+str(tf), con, if_exists='append', index=False)
+                con.close()
 
     stop_time = datetime.now()
     print("Start time: ", start_time, "   Stop time: ", stop_time, "   Duration: ", stop_time-start_time)
 
 #===========Data gathering and calculation============
 def data_gathering_preparing(Exchange, Symbol, timeframe, DBname, TailNumber):
+    global Job_Delay
     con = sqlite3.connect(DBname)
     df = pd.read_sql('SELECT open_time,open,high,low,close,volume FROM ' + Exchange + '_' + Symbol + '_' + str(timeframe) + 'm', con).tail(TailNumber)
+    df_delay = pd.read_sql('SELECT max_process_duration FROM Parameters', con);Job_Delay = df_delay.values[0][0]
     con.close()
     df['open_time'] = df['open_time'] - 14400  # adjustin time zone
     df['Time_Tag'] = pd.to_datetime(df['open_time'], unit='s')  # changing time format from seconds to time and date
@@ -169,7 +169,6 @@ def sub_polynomial_regression_support_Resistance(DataFrame, SwingCount, SwingThr
     DataFrame.loc[DataFrame['open_time'] >= (df1['open_time'].head(1).values[0]), ['Sub_PolyReg_Support']] = \
         mymodel2((DataFrame[(DataFrame['open_time']>=(df1['open_time'].head(1).values[0]))])[['open_time']])
     return DataFrame
-
 def trend_power_calculation(DataFrame):
     #Close position calculate 3-states of High Close, Mid Close and Low Close and return a number between -1 to +1 (Data Normalization/-1~-0.34 low close/-0.34~+0.34 mid close/+0.34~1 high close)
     DataFrame['close_position_power'] = ((DataFrame['close'] - (((DataFrame['high']-DataFrame['low'])/2)+DataFrame['low'])) * 2)  / (DataFrame['high']-DataFrame['low'])  # Formula ((C-M)*2)/(H-L) = -1 to +1
@@ -189,6 +188,7 @@ def trend_power_calculation(DataFrame):
     DataFrame.loc[(DataFrame['close'] == DataFrame['open']), ['candle_color']] = "gray"
 
     return DataFrame
+
 def alarm_orderplace_function():
     for i, Symbol in enumerate(markets):        #getthing live price od markets
         try:

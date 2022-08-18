@@ -30,7 +30,7 @@ live_count = 0
 #=============Initializing parameters=================
 #***Note: Each cycle processing duration could not exceed from the minimum timeframe
 exchanges = ['binance', 'bybit']
-markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
+markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'ADAUSDT']
 timeframes = [5, 30, 60]    #valid Time frames in minutes 1 3 5 15 30 60 120 240 360 720
 DB_Name = "Data_Gathering_DB.db"
 
