@@ -136,8 +136,10 @@ def job():
                     table_name = exc.upper() + '_' + pair + '_' + str(tf) + 'm'
                     con = sqlite3.connect(DB_Name)
                     Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
-
-                    tables_list = Existing_Tables_List['name'].values.tolist();tables_list.remove('Parameters');tables_list.remove('Live_price')
+                    try:
+                        tables_list = Existing_Tables_List['name'].values.tolist();tables_list.remove('Parameters');tables_list.remove('Live_price')
+                    except:
+                        pass
                     if table_name in tables_list:  #checking existing tables, if exist get the last record and calculate the StartTimeSecs
                         Last_Record = int(pd.read_sql('select open_time from ' + table_name + ' ORDER BY open_time DESC LIMIT 1', con).values[0][0])
                         df = get_data(exchange=exc, symbol=pair, timeframe=tf, StartTimeSecs=Last_Record)

@@ -7,7 +7,7 @@ con = sqlite3.connect(DB_Name)
 Existing_Tables_List = pd.read_sql('SELECT name from sqlite_master where type= \"table\"', con)
 
 for i in Existing_Tables_List['name'].values.tolist():
-    if i == 'Parameters' or i == 'Live_price': break
+    if i == 'Parameters' or i == 'Live_pricewinsound.Beep(1000, 100)': break
     fail_status = False
     df = pd.read_sql('SELECT open_time from ' + i, con)
     tf = int(i.split('_')[-1].replace('m', ''))

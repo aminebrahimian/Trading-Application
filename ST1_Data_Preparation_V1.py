@@ -22,7 +22,7 @@ global timeframes
 
 exchanges = ['BYBIT', 'BINANCE']
 markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
-timeframes = [5]
+timeframes = [60]
 FirstShortConditionLatch = [False, False, False]
 FirstLongConditionLatch = [False, False, False]
 SecondShortConditionLatch = [False, False, False]
