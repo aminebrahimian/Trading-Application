@@ -41,8 +41,8 @@ def job():
                 Data=data_gathering_preparing(Exchange=exc, Symbol=Symbol, timeframe=tf, DBname="Data_Gathering_DB.db", TailNumber=200)    #Fetching data from DB and preparing for modules
                 Data=swing_detector_prepertion(DataFrame=Data, Order=6)     #Adding swings to the Data farme
                 Data=swing_detector_prepertion_order2(DataFrame=Data, Order=2)
-                Data=linear_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0)     #Adding Linear regression support and resistance to the Data farme
-                Data=sub_linear_regression_support_Resistance(DataFrame=Data, SwingCount=3, SwingThreshold=0)
+                Data=linear_regression_support_Resistance(DataFrame=Data, SwingCount=3, SwingThreshold=0)     #Adding Linear regression support and resistance to the Data farme
+                Data=sub_linear_regression_support_Resistance(DataFrame=Data, SwingCount=2, SwingThreshold=0)
                 Data=polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
                 Data=sub_polynomial_regression_support_Resistance(DataFrame=Data, SwingCount=4, SwingThreshold=0, degree=2)
                 Data=trend_power_calculation(DataFrame=Data)
