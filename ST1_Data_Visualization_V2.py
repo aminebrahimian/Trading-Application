@@ -20,7 +20,7 @@ def data_fetching(exchange, symbol):
     df1['Open_Time'] = pd.to_datetime(df1['open_time'], unit='s');del df1['open_time'];del df1['Time_Tag']
     df1 = df1.set_index('Open_Time')
     live_price = df2[exchange + '_' + symbol].values[0]
-    
+
     return df1, live_price
 
 # ------------------------------------------------------------------------------
@@ -31,7 +31,7 @@ app.layout = html.Div([
     dcc.Dropdown(id="slct_exchange",
                  options=[
                      {"label": "BYBIT", "value": "BYBIT"},
-                     {"label": "BINANCE", "value": "BINANCE"}],
+                     {"label": "BYBIT", "value": "BYBIT"}],
                  multi=False,
                  value="BYBIT",
                  style={'width': "40%"}
@@ -40,7 +40,8 @@ app.layout = html.Div([
                  options=[
                      {"label": "BTCUSDT", "value": "BTCUSDT"},
                      {"label": "ETHUSDT", "value": "ETHUSDT"},
-                     {"label": "BNBUSDT", "value": "BNBUSDT"}],
+                     {"label": "BNBUSDT", "value": "BNBUSDT"},
+                     {"label": "LUNA2USDT", "value": "LUNA2USDT"}],
                  multi=False,
                  value="BTCUSDT",
                  style={'width': "40%"}

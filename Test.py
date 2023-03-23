@@ -1,25 +1,10 @@
-import winsound
-import time
-from datetime import datetime
-import schedule
+from pybit import usdt_perpetual
+import requests
 
-FirstTimeRun = True
+session = usdt_perpetual.HTTP("https://api.bybit.com")
+result = session.query_kline(symbol='LUNA2USDT', interval=5, limit=200, from_time=1666301066)['result']
+print(result)
 
-def job():
-    print(datetime.now())
-    winsound.Beep(700, 100)
-
-
-while FirstTimeRun:
-    datetime_object = datetime.now()
-    if not datetime_object.minute % 5 and datetime_object.second == 0:
-        print('********************Getting Cyclic Data Starts********************')
-        schedule.every(5).minutes.at(":00").do(job)  # Task Scheduler
-        print("Run time: ", datetime.now())
-        job()
-        FirstTimeRun = False
-        break
-    time.sleep(1)
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+URL = "https://api.binance.com/api/v3/klines?symbol=" + 'LUNAUSDT' + "&startTime=" + str(1666301066) + "000&interval=" + '5' + "&limit=1"
+result = requests.get(url=URL).json()
+print(result)

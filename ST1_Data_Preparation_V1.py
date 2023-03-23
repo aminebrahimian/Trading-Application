@@ -20,8 +20,8 @@ global SecondShortConditionLatch
 global SecondLongConditionLatch
 global timeframes
 
-exchanges = ['BYBIT', 'BINANCE']
-markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']
+exchanges = ['BYBIT']
+markets = ['BTCUSDT', 'ETHUSDT', 'BNBUSDT','LUNA2USDT']
 timeframes = [60]
 FirstShortConditionLatch = [False, False, False]
 FirstLongConditionLatch = [False, False, False]
@@ -55,6 +55,8 @@ def job():
                 df_Temp = pd.DataFrame(Data_Temp)
                 df_Temp.to_sql('Market_Logs_'+exc+'_'+Symbol+'_'+str(tf), con, if_exists='append', index=False)
                 con.close()
+
+                print(exc, " / ", Symbol,  " / ", tf, "Diffrence: ", ((Data['LinReg_Resistance'][-1]*100)/Data['LinReg_Support'][-1])-100)
 
     stop_time = datetime.now()
     print("Start time: ", start_time, "   Stop time: ", stop_time, "   Duration: ", stop_time-start_time)
